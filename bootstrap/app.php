@@ -12,26 +12,25 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+
         // Prevent redirects for API authentication
         $middleware->redirectGuestsTo(function ($request) {
             if ($request->expectsJson() || $request->is('api/*')) {
-                return null; // Throw exception instead of redirecting
+                return null;
             }
-            
-            return null; // Or route to your web login if you have one
+            return null;
         });
-        
-        // Add Sanctum middleware
-        $middleware->api(append: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+
+        // ✅ API = Token based (NO CSRF)
+        $middleware->api([
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // Handle API authentication errors
         $exceptions->renderable(function (\Illuminate\Auth\AuthenticationException $e, $request) {
             if ($request->is('api/*')) {
                 return response()->json([
-                    'message' => 'Unauthenticated'
+                    'message' => 'Unauthenticated / Not logged in'
                 ], 401);
             }
         });

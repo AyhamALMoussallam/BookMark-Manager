@@ -9,16 +9,21 @@ use Illuminate\Support\Facades\Auth;
 
 class CollectionController extends Controller
 {
-    // Display all collections
-    public function index()
-    {
-        $collections = Auth::user()->collections()->withCount('bookmarks')->get();
-        
-        return $this->success(
-            ['collections' => $collections],
-            'Collections retrieved successfully'
-        );
-    }
+
+    // Display all collections with their bookmarks
+public function index()
+{
+    $collections = Auth::user()->collections()
+        ->with(['bookmarks.tags'])  // <-- هنا أضفنا bookmarks مع tags
+        ->withCount('bookmarks')
+        ->get();
+    
+    return $this->success(
+        ['collections' => $collections],
+        'Collections retrieved successfully'
+    );
+}
+
 
     // Create a new collection
     public function store(Request $request)

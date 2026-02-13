@@ -24,10 +24,13 @@ class UserController extends Controller
 
         try {
             $user = User::create([
+                
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
             ]);
+            $user->sendEmailVerificationNotification();
+
 
             return $this->created([
                 'user' => [
@@ -67,6 +70,13 @@ class UserController extends Controller
                 'message' => 'Email or password is incorrect.',
             ], 401);
         }
+        // Verify Email
+        if (!$user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Please verify your email address.',
+            ], 403);
+        }
+        
 
         // Create token
         $token = $user->createToken('auth_token')->plainTextToken;

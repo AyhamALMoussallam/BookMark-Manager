@@ -120,47 +120,48 @@ class BookmarkController extends Controller
     // Update a bookmark
     public function update(Request $request, $id)
     {
-        $bookmark = Auth::user()->bookmarks()->find($id);
-        
-        if (!$bookmark) {
-            return $this->notFound('Bookmark');
-        }
-    
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'is_favorite' => 'nullable|boolean',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:50',
-        ]);
-    
-        $oldTags = $bookmark->tags()->get();
-        $bookmark->update($validated);
-    
-        // Sync tags if provided
-        if ($request->has('tags')) {
-            $bookmark->tags()->detach();
-            
-            foreach ($validated['tags'] as $tagName) {
-                $tag = Tag::firstOrCreate(
-                    ['name' => $tagName, 'user_id' => Auth::id()]
-                );
-                $bookmark->tags()->attach($tag->id);
-            }
-            
-            // Clean up old tags
-            foreach ($oldTags as $tag) {
-                if ($tag->bookmarks()->count() === 0) {
-                    $tag->delete();
-                }
-            }
-        }
-    
-        return $this->success(
-            ['bookmark' => $bookmark->load('tags')],
-            'Bookmark updated successfully'
-        );
+    $bookmark = Auth::user()->bookmarks()->find($id);
+    if (!$bookmark) {
+        return $this->notFound('Bookmark');
     }
+
+    $validated = $request->validate([
+        'url' => 'required|url',
+        'title' => 'nullable|string|max:255',
+        'description' => 'nullable|string',
+        'tags' => 'nullable|array',
+        'tags.*' => 'string|max:50',
+        'is_favorite' => 'nullable|boolean',
+    ]);
+
+    // إذا تغير الرابط، عدّل Favicon URL تلقائيًا
+    if ($bookmark->url !== $validated['url']) {
+        $domain = parse_url($validated['url'], PHP_URL_HOST);
+        $validated['favicon_url'] = "https://www.google.com/s2/favicons?domain={$domain}&sz=64";
+    }
+
+    // إذا لم يُكتب عنوان جديد، استخدم الدومين كعنوان
+    if (empty($validated['title'])) {
+        $validated['title'] = parse_url($validated['url'], PHP_URL_HOST) ?? 'Untitled';
+    }
+
+    $bookmark->update($validated);
+
+    // تحديث الوسوم
+    if (isset($validated['tags'])) {
+        $bookmark->tags()->detach();
+        foreach ($validated['tags'] as $tagName) {
+            $tag = Tag::firstOrCreate(['name' => $tagName, 'user_id' => Auth::id()]);
+            $bookmark->tags()->attach($tag->id);
+        }
+    }
+
+    return $this->success(
+        ['bookmark' => $bookmark->load('tags')],
+        'Bookmark updated successfully'
+    );
+}
+
 
     // Delete a bookmark
     public function destroy($id)
