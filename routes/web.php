@@ -13,10 +13,15 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Auth page (Login / Register / Google)
-Route::get('/auth', function () {
-    return view('auth.auth');
-})->name('auth');
+// Login page
+Route::get('/login', function () {
+    return view('auth.login');
+})->name('login');
+
+// Signup page
+Route::get('/signup', function () {
+    return view('auth.signup');
+})->name('signup');
 
 // Google OAuth callback (receives token and stores it)
 Route::get('/auth/callback', function () {
