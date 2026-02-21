@@ -193,7 +193,7 @@ button.add-btn { background:#4CAF50; color:white; margin-bottom:5px; }
 <script>
 const apiBase = '/api';
 const token = localStorage.getItem('auth_token');
-if(!token) window.location.href='/auth';
+if(!token) window.location.href='/login';
 const headers = { Authorization: 'Bearer ' + token };
 
 let editingBookmarkId = null;
@@ -411,7 +411,7 @@ function saveTag(){ const data={name: document.getElementById('tag-name').value}
 function deleteTag(id){ axios.delete(`${apiBase}/tags/${id}`, { headers }).then(fetchTags); }
 
 // Logout
-function logout(){ axios.post(`${apiBase}/logout`, {}, { headers }).then(()=>{ localStorage.removeItem('auth_token'); window.location.href='/auth'; }); }
+function logout(){ axios.post(`${apiBase}/logout`, {}, { headers }).then(()=>{ localStorage.removeItem('auth_token'); window.location.href='/login'; }); }
 
 // Modals
 function openBookmarkModal(b=null){
