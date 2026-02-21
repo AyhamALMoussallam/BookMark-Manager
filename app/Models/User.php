@@ -11,6 +11,7 @@ use App\Models\Tag;
 use App\Models\Collection;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\CustomVerifyEmail;
+use App\Notifications\ResetPasswordEmail;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -56,5 +57,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendEmailVerificationNotification()
     {
         $this->notify(new CustomVerifyEmail());
+    }
+
+    /**
+     * Override default password reset notification to use custom email
+     */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token)
+    {
+        $this->notify(new ResetPasswordEmail($token));
     }
 }

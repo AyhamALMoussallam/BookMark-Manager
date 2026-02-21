@@ -29,6 +29,9 @@ button:hover { background:#45a049; }
     <button onclick="login()">Sign In</button>
 
     <div class="link">
+        <a href="/forgot-password">Forgot password?</a>
+    </div>
+    <div class="link">
         <a href="/signup">Don't have an account? Sign Up</a>
     </div>
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\BookmarkController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\EmailVerificationController;
+use App\Http\Controllers\PasswordResetController;
 
 // ------------------------------
 // Public Routes
@@ -37,6 +38,9 @@ Route::post('/email/verification-notification',
     [EmailVerificationController::class, 'resend']
 )->middleware('throttle:6,1');
 
+// -------- Password Reset (no auth required) --------
+Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword']);
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
 
 // ------------------------------
 // Protected Routes (Require Auth via Sanctum)

@@ -23,6 +23,16 @@ Route::get('/signup', function () {
     return view('auth.signup');
 })->name('signup');
 
+// Forgot password page (enter email)
+Route::get('/forgot-password', function () {
+    return view('auth.forgot-password');
+})->name('password.request');
+
+// Reset password page (from email link; token & email in query)
+Route::get('/reset-password', function () {
+    return view('auth.reset-password');
+})->name('password.reset');
+
 // Google OAuth callback (receives token and stores it)
 Route::get('/auth/callback', function () {
     return view('auth.callback');
