@@ -24,6 +24,17 @@ button.add-btn { background:#4CAF50; color:white; margin-bottom:5px; }
 .modal-content input, .modal-content textarea { width:100%; margin:5px 0; padding:5px; }
 .close { float:right; cursor:pointer; font-weight:bold; color:#f44336; }
 .message { color:red; text-align:center; margin-top:5px; }
+
+/* Search & filters */
+.search-filters { background:white; padding:16px; border-radius:8px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+.search-filters .row { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+.search-filters label { display:block; font-size:12px; color:#555; margin-bottom:4px; }
+.search-filters input[type="text"] { padding:8px 12px; border:1px solid #ccc; border-radius:6px; min-width:200px; }
+.search-filters select { padding:8px 12px; border:1px solid #ccc; border-radius:6px; min-width:140px; background:white; }
+.search-filters .filter-group { display:flex; flex-direction:column; }
+.search-filters button.search-btn { background:#4CAF50; color:white; padding:8px 16px; border:none; border-radius:6px; cursor:pointer; }
+.search-filters button.clear-btn { background:#757575; color:white; padding:8px 16px; border:none; border-radius:6px; cursor:pointer; }
+.search-filters .filter-actions { display:flex; gap:8px; align-items:flex-end; }
 </style>
 </head>
 <body>
@@ -34,6 +45,59 @@ button.add-btn { background:#4CAF50; color:white; margin-bottom:5px; }
 </header>
 
 <div class="container">
+    <!-- Search & filters for bookmarks -->
+    <div class="search-filters">
+        <div class="row">
+            <div class="filter-group">
+                <label>Search (title / description)</label>
+                <input type="text" id="search-input" placeholder="Search bookmarks..." onkeypress="if(event.key==='Enter')applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label>Favorite</label>
+                <select id="filter-favorite">
+                    <option value="">All</option>
+                    <option value="1">Favorites only</option>
+                    <option value="0">Not favorite</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Tag</label>
+                <select id="filter-tag">
+                    <option value="">All tags</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Collection</label>
+                <select id="filter-collection">
+                    <option value="">All collections</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button class="search-btn" onclick="applyFilters()">Search</button>
+                <button class="clear-btn" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+    </div>
+
+        <!-- Search Results -->
+    <div id="search-results-container" 
+    style="display:none; background:white; padding:15px; border-radius:8px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+
+    <h3>Search Results</h3>
+    <table style="width:100%; border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>URL</th>
+            <th>Description</th>
+            <th>Tags</th>
+            <th>Favorite</th>
+        </tr>
+    </thead>
+    <tbody id="search-results"></tbody>
+    </table>
+    </div>
+
     <!-- Bookmarks -->
     <h2>Bookmarks <button class="add-btn" onclick="openBookmarkModal()">Add</button></h2>
     <table>
@@ -140,9 +204,57 @@ let editingTagId = null;
 function openModal(id) { document.getElementById(id).style.display='flex'; }
 function closeModal(id) { document.getElementById(id).style.display='none'; }
 
-// --- Bookmarks ---
+// --- Bookmarks (with optional search/filters) ---
+function getBookmarkFilters() {
+    const search = document.getElementById('search-input').value.trim();
+    const favorite = document.getElementById('filter-favorite').value;
+    const tag = document.getElementById('filter-tag').value;
+    const collection = document.getElementById('filter-collection').value;
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (favorite !== '') params.set('favorite', favorite);
+    if (tag) params.set('tags', tag);
+    if (collection) params.set('collection', collection);
+    return params.toString();
+}
+
+function applyFilters() {
+    const qs = getBookmarkFilters();
+    const url = qs ? `${apiBase}/bookmarks?${qs}` : `${apiBase}/bookmarks`;
+
+    axios.get(url, { headers })
+    .then(res => {
+        const container = document.getElementById('search-results');
+        const wrapper = document.getElementById('search-results-container');
+
+        container.innerHTML = '';
+
+        if (!res.data.data.bookmarks.length) {
+            container.innerHTML = '<tr><td colspan="5">No results found</td></tr>';
+        } else {
+            res.data.data.bookmarks.forEach(b => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${b.title}</td>
+                    <td><a href="${b.url}" target="_blank">${b.url}</a></td>
+                    <td>${b.description || ''}</td>
+                    <td>${b.tags.map(t => t.name).join(', ')}</td>
+                    <td>${b.is_favorite ? 'Yes' : 'No'}</td>
+                `;
+                container.appendChild(tr);
+            });
+        }
+
+        wrapper.style.display = 'block';
+    })
+    .catch(err => console.error(err));
+}
+
+
 function fetchBookmarks() {
-    axios.get(`${apiBase}/bookmarks`, { headers })
+    const qs = getBookmarkFilters();
+    const url = qs ? `${apiBase}/bookmarks?${qs}` : `${apiBase}/bookmarks`;
+    axios.get(url, { headers })
     .then(res => {
         const container = document.getElementById('bookmarks');
         container.innerHTML = '';
@@ -190,12 +302,41 @@ function saveBookmark(){
 function deleteBookmark(id){ axios.delete(`${apiBase}/bookmarks/${id}`, { headers }).then(fetchBookmarks); }
 function toggleFavorite(id){ axios.post(`${apiBase}/bookmarks/${id}/toggle-favorite`, {}, { headers }).then(fetchBookmarks); }
 
+// --- Populate filter dropdowns (tags & collections) ---
+function populateFilterDropdowns() {
+    const tagSelect = document.getElementById('filter-tag');
+    const collectionSelect = document.getElementById('filter-collection');
+    const currentTag = tagSelect.value;
+    const currentCollection = collectionSelect.value;
+    tagSelect.innerHTML = '<option value="">All tags</option>';
+    collectionSelect.innerHTML = '<option value="">All collections</option>';
+    axios.get(`${apiBase}/tags`, { headers }).then(res => {
+        res.data.data.tags.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.name;
+            opt.textContent = t.name;
+            if (t.name === currentTag) opt.selected = true;
+            tagSelect.appendChild(opt);
+        });
+    }).catch(() => {});
+    axios.get(`${apiBase}/collections`, { headers }).then(res => {
+        res.data.data.collections.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.name;
+            if (String(c.id) === currentCollection) opt.selected = true;
+            collectionSelect.appendChild(opt);
+        });
+    }).catch(() => {});
+}
+
 // --- Collections ---
 function fetchCollections() {
     axios.get(`${apiBase}/collections`, { headers })
     .then(res => {
         const container = document.getElementById('collections');
         container.innerHTML = '';
+
         res.data.data.collections.forEach(c => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -208,44 +349,8 @@ function fetchCollections() {
                 </td>
             `;
             container.appendChild(tr);
-
-            // Hidden bookmarks row
-            const trHidden = document.createElement('tr');
-            trHidden.id = `collection-bookmarks-${c.id}`;
-            trHidden.style.display = 'none';
-            trHidden.innerHTML = `
-                <td colspan="3">
-                    <table style="width:100%; border-collapse:collapse;">
-                        <thead>
-                            <tr>
-                                <th>Title</th><th>URL</th><th>Description</th><th>Tags</th><th>Favorite</th><th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="collection-bookmarks-body-${c.id}"></tbody>
-                    </table>
-                    <button onclick="openAddBookmarkToCollection(${c.id})">Add Bookmark</button>
-                </td>
-            `;
-            container.appendChild(trHidden);
-
-            // Fill bookmarks
-            const tbody = document.getElementById(`collection-bookmarks-body-${c.id}`);
-            if(c.bookmarks && c.bookmarks.length){
-                tbody.innerHTML = '';
-                c.bookmarks.forEach(b=>{
-                    const trB = document.createElement('tr');
-                    trB.innerHTML = `
-                        <td>${b.title}</td>
-                        <td><a href="${b.url}" target="_blank">${b.url}</a></td>
-                        <td>${b.description || ''}</td>
-                        <td>${b.tags.map(t=>t.name).join(', ')}</td>
-                        <td>${b.is_favorite ? 'Yes' : 'No'}</td>
-                        <td><button onclick="removeBookmarkFromCollection(${c.id}, ${b.id})" class="delete">Remove</button></td>
-                    `;
-                    tbody.appendChild(trB);
-                });
-            }
         });
+
     })
     .catch(err => console.error(err));
 }
@@ -264,9 +369,13 @@ function openCollectionModalById(id){
         .catch(err => console.error(err));
 }
 function removeBookmarkFromCollection(collectionId, bookmarkId){
-    axios.delete(`${apiBase}/collections/${collectionId}/remove-bookmark/${bookmarkId}`, { headers })
-        .then(fetchCollections)
-        .catch(err=>console.error(err));
+    axios.delete(`${apiBase}/collections/${collectionId}/bookmarks/${bookmarkId}`, { headers })
+        .then(() => {
+            fetchCollections();
+        })
+        .catch(err => {
+            console.error(err);
+        });
 }
 function toggleCollectionBookmarks(id){
     const tr = document.getElementById(`collection-bookmarks-${id}`);
@@ -364,6 +473,7 @@ function addSelectedBookmarkToCollection(){
 fetchBookmarks();
 fetchCollections();
 fetchTags();
+populateFilterDropdowns();
 
 </script>
 

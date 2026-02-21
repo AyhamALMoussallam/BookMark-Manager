@@ -29,14 +29,14 @@ class BookmarkController extends Controller
     
     // Search in title/description if provided
     if ($request->has('search')) {
-        $searchTerm = '%' . $request->search . '%';
+        $searchTerm =  $request->search . '%';
         $query->where(function ($q) use ($searchTerm) {
             $q->where('title', 'like', $searchTerm)
               ->orWhere('description', 'like', $searchTerm);
         });
     }
     
-    // NEW: Filter by collection if provided
+    // Filter by collection if provided
     if ($request->has('collection')) {
         $collectionId = $request->collection;
         $query->whereHas('collections', function ($q) use ($collectionId) {
