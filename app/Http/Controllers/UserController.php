@@ -15,7 +15,7 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:6|confirmed',
         ]);
 
         if ($validator->fails()) {
@@ -136,6 +136,35 @@ class UserController extends Controller
         ]);
     }
 
+    // Change password (requires current password)
+    public function changePassword(Request $request)
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors(), 'Invalid input data');
+        }
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect.',
+            ], 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        return response()->json([
+            'message' => 'Password updated successfully.',
+        ], 200);
+    }
+
     // Update user profile
     public function updateProfile(Request $request)
     {
@@ -144,7 +173,6 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
-            'password' => 'nullable|string|min:6',
         ]);
 
         if ($validator->fails()) {
@@ -162,9 +190,6 @@ class UserController extends Controller
             $updateData['email'] = $request->email;
         }
         
-        if ($request->filled('password')) {
-            $updateData['password'] = Hash::make($request->password);
-        }
 
         // Update only if there's data to update
         if (!empty($updateData)) {

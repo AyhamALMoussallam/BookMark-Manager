@@ -26,6 +26,7 @@ button:hover { background:#45a049; }
     <input type="text" id="signup-name" placeholder="Name">
     <input type="email" id="signup-email" placeholder="Email">
     <input type="password" id="signup-password" placeholder="Password">
+    <input type="password" id="signup-password-confirm" placeholder="Confirm password">
     <button onclick="signup()">Sign Up</button>
 
     <button id="resend-verification" onclick="resendVerificationEmail()">
@@ -46,8 +47,15 @@ function signup() {
     const name = document.getElementById('signup-name').value;
     const email = document.getElementById('signup-email').value;
     const password = document.getElementById('signup-password').value;
+    const passwordConfirm = document.getElementById('signup-password-confirm').value;
 
-    axios.post(`${apiBase}/signup`, { name, email, password })
+    if (password !== passwordConfirm) {
+        document.getElementById('message').style.color = 'red';
+        document.getElementById('message').textContent = 'Password and confirm password do not match.';
+        return;
+    }
+
+    axios.post(`${apiBase}/signup`, { name, email, password, password_confirmation: passwordConfirm })
         .then(res => {
             document.getElementById('message').style.color = 'green';
             document.getElementById('message').textContent =

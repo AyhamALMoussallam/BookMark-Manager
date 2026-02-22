@@ -48,3 +48,8 @@ Route::get('/auth/callback', function () {
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->name('dashboard');
+
+// User profile (protected via frontend token check)
+Route::get('/profile', function () {
+    return view('profile');
+})->name('profile');

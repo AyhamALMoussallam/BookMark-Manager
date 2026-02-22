@@ -39,9 +39,12 @@ button.add-btn { background:#4CAF50; color:white; margin-bottom:5px; }
 </head>
 <body>
 
-<header>
-    <h1>My Dashboard</h1>
-    <button onclick="logout()">Logout</button>
+<header style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px;">
+    <h1 style="margin:0;">My Dashboard</h1>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <a href="/profile" id="profile-link" style="color:white; text-decoration:none; font-weight:bold; padding:6px 12px; border-radius:6px; background:rgba(255,255,255,0.2);">Loading...</a>
+        <button onclick="logout()" style="background:rgba(255,255,255,0.2); color:white; padding:6px 12px; border:none; border-radius:6px; cursor:pointer;">Logout</button>
+    </div>
 </header>
 
 <div class="container">
@@ -468,6 +471,18 @@ function addSelectedBookmarkToCollection(){
 }
 
 
+
+// Load user name for profile link
+axios.get(`${apiBase}/user`, { headers })
+    .then(res => {
+        const name = res.data.user?.name || 'Profile';
+        const link = document.getElementById('profile-link');
+        if (link) link.textContent = name;
+    })
+    .catch(() => {
+        const link = document.getElementById('profile-link');
+        if (link) link.textContent = 'Profile';
+    });
 
 // Initial load
 fetchBookmarks();

@@ -50,6 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // -------- User Routes --------
     Route::get('/user', [UserController::class, 'getCurrentUser']);
     Route::post('/logout', [UserController::class, 'logout']);
+    Route::put('/profile/password', [UserController::class, 'changePassword']);
     Route::put('/profile', [UserController::class, 'updateProfile']);
     Route::delete('/profile', [UserController::class, 'deleteAccount']);
 
