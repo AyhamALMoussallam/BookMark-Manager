@@ -33,7 +33,7 @@ button.add-btn { background:#4CAF50; color:white; margin-bottom:5px; }
 }
 
 .modal-content input[type="checkbox"] {
-    margin: 0;              /* شيل أي margin افتراضي */
+    margin: 0;              
 }
 
 .modal-content button {
@@ -401,9 +401,7 @@ function toggleCollectionBookmarks(id){
     const tr = document.getElementById(`collection-bookmarks-${id}`);
     tr.style.display = (tr.style.display==='none') ? '' : 'none';
 }
-function openAddBookmarkToCollection(collectionId){
-    alert('هنا تقدر تعمل modal لإضافة bookmark موجود للـ Collection');
-}
+
 
 // --- Tags ---
 function fetchTags(){
@@ -448,14 +446,14 @@ function openCollectionModal(c=null){editingCollectionId=c?.id||null; document.g
 function openTagModal(t=null){editingTagId=t?.id||null; document.getElementById('tag-modal-title').textContent=t?'Edit Tag':'Add Tag'; document.getElementById('tag-name').value=t?.name||''; openModal('tag-modal');}
 
 
-let currentCollectionId = null; // لحفظ الـ Collection الحالي عند فتح الـ Modal
+let currentCollectionId = null; 
 
 function openAddBookmarkToCollection(collectionId){
     currentCollectionId = collectionId;
     const select = document.getElementById('bookmark-select');
     select.innerHTML = '';
     
-    // جلب كل Bookmarks الموجودة
+    // Get all Bookmarks
     axios.get(`${apiBase}/bookmarks`, { headers })
         .then(res=>{
             res.data.data.bookmarks.forEach(b=>{
@@ -471,7 +469,7 @@ function openAddBookmarkToCollection(collectionId){
         });
 }
 
-// بعد اختيار bookmark من الـ select
+
 function addSelectedBookmarkToCollection(){
     const bookmarkId = document.getElementById('bookmark-select').value;
     if(!bookmarkId) return;
@@ -479,7 +477,7 @@ function addSelectedBookmarkToCollection(){
     axios.post(`${apiBase}/collections/${currentCollectionId}/bookmarks/${bookmarkId}`, {}, { headers })
         .then(res=>{
             closeModal('add-bookmark-collection-modal');
-            fetchCollections(); // تحديث البيانات
+            fetchCollections(); 
             currentCollectionId = null;
         }).catch(err=>{
             console.error(err);
