@@ -24,6 +24,23 @@ button.add-btn { background:#4CAF50; color:white; margin-bottom:5px; }
 .modal-content input, .modal-content textarea { width:100%; margin:5px 0; padding:5px; }
 .close { float:right; cursor:pointer; font-weight:bold; color:#f44336; }
 .message { color:red; text-align:center; margin-top:5px; }
+.modal-content label {
+    display: inline-flex;   
+    align-items: center;
+    gap: 4px;              
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.modal-content input[type="checkbox"] {
+    margin: 0;              /* شيل أي margin افتراضي */
+}
+
+.modal-content button {
+    display: block;
+    width: 100%;
+    margin-top: 15px;
+}
 
 /* Search & filters */
 .search-filters { background:white; padding:16px; border-radius:8px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
@@ -153,7 +170,7 @@ button.add-btn { background:#4CAF50; color:white; margin-bottom:5px; }
         <input type="text" id="bookmark-title" placeholder="Title">
         <textarea id="bookmark-description" placeholder="Description"></textarea>
         <input type="text" id="bookmark-tags" placeholder="Tags comma separated">
-        <label><input type="checkbox" id="bookmark-favorite"> Favorite</label>
+        <label><input type="checkbox" id="bookmark-favorite">Favorite</label>
         <button onclick="saveBookmark()">Save</button>
         <div class="message" id="bookmark-message"></div>
     </div>
