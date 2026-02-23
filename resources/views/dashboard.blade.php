@@ -503,7 +503,6 @@ async function fetchTags(){
     return tags;
 }
 
-// دالة مخصصة لتحديث dropdown بعد كل تعديل
 async function refreshTagsDropdown(){
     const tags = await fetchTags();
     const select = document.getElementById('filter-tag');
@@ -525,8 +524,19 @@ function saveTag(){
         editingTagId=null;
     }).catch(err=>{ console.error(err); alert(err.response?.data?.message||'Failed'); });
 }
-function deleteTag(id){ axios.delete(`${apiBase}/tags/${id}`, { headers }).then(refreshTagsDropdown); }
+function deleteTag(id){ 
+    axios.delete(`${apiBase}/tags/${id}`, { headers })
+        .then(async () => {
+            await refreshTagsDropdown();
+            await fetchBookmarks(); 
 
+            const wrapper = document.getElementById('search-results-container');
+            if (wrapper && wrapper.style.display === 'block') {
+                applyFilters();
+            }
+        })
+        .catch(err => console.error(err));
+}
 // Logout
 function logout(){ axios.post(`${apiBase}/logout`, {}, { headers }).then(()=>{ localStorage.removeItem('auth_token'); window.location.href='/login'; }); }
 
