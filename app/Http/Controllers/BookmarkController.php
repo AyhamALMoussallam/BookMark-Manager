@@ -134,25 +134,31 @@ class BookmarkController extends Controller
         'is_favorite' => 'nullable|boolean',
     ]);
 
-    // إذا تغير الرابط، عدّل Favicon URL تلقائيًا
     if ($bookmark->url !== $validated['url']) {
         $domain = parse_url($validated['url'], PHP_URL_HOST);
         $validated['favicon_url'] = "https://www.google.com/s2/favicons?domain={$domain}&sz=64";
     }
 
-    // إذا لم يُكتب عنوان جديد، استخدم الدومين كعنوان
     if (empty($validated['title'])) {
         $validated['title'] = parse_url($validated['url'], PHP_URL_HOST) ?? 'Untitled';
     }
 
     $bookmark->update($validated);
 
-    // تحديث الوسوم
     if (isset($validated['tags'])) {
+        $oldTags = $bookmark->tags()->get();
+
         $bookmark->tags()->detach();
+
         foreach ($validated['tags'] as $tagName) {
             $tag = Tag::firstOrCreate(['name' => $tagName, 'user_id' => Auth::id()]);
             $bookmark->tags()->attach($tag->id);
+        }
+
+        foreach ($oldTags as $tag) {
+            if ($tag->bookmarks()->count() === 0) {
+                $tag->delete();
+            }
         }
     }
 

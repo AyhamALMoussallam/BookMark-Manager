@@ -42,6 +42,36 @@ button.add-btn { background:#4CAF50; color:white; margin-bottom:5px; }
     margin-top: 15px;
 }
 
+.tags-input-group {
+    margin-top: 10px;
+}
+
+.tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 24px;
+    padding: 4px 0;
+}
+
+.tag-chip {
+    background: #e0f2f1;
+    border-radius: 999px;
+    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.tag-chip button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0 2px;
+    color: #555;
+}
+
 /* Search & filters */
 .search-filters { background:white; padding:16px; border-radius:8px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
 .search-filters .row { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
@@ -169,7 +199,17 @@ button.add-btn { background:#4CAF50; color:white; margin-bottom:5px; }
         <input type="text" id="bookmark-url" placeholder="URL">
         <input type="text" id="bookmark-title" placeholder="Title">
         <textarea id="bookmark-description" placeholder="Description"></textarea>
-        <input type="text" id="bookmark-tags" placeholder="Tags comma separated">
+        <div class="tags-input-group">
+            <label>Tags</label>
+            <div id="bookmark-tags-container" class="tag-chips"></div>
+            <input 
+                type="text" 
+                id="bookmark-tag-input" 
+                placeholder="Add tag and press Enter"
+                onkeypress="if(event.key==='Enter'){ event.preventDefault(); addBookmarkTagFromInput(); }"
+            >
+            <button type="button" onclick="addBookmarkTagFromInput()">Add Tag</button>
+        </div>
         <label><input type="checkbox" id="bookmark-favorite">Favorite</label>
         <button onclick="saveBookmark()">Save</button>
         <div class="message" id="bookmark-message"></div>
@@ -219,10 +259,69 @@ const headers = { Authorization: 'Bearer ' + token };
 let editingBookmarkId = null;
 let editingCollectionId = null;
 let editingTagId = null;
+let currentBookmarkTags = [];
 
 // Modal helpers
 function openModal(id) { document.getElementById(id).style.display='flex'; }
 function closeModal(id) { document.getElementById(id).style.display='none'; }
+
+// Bookmark tag helpers
+function renderBookmarkTags() {
+    const container = document.getElementById('bookmark-tags-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (!currentBookmarkTags.length) {
+        const span = document.createElement('span');
+        span.style.color = '#888';
+        span.textContent = 'No tags yet';
+        container.appendChild(span);
+        return;
+    }
+
+    currentBookmarkTags.forEach((tag, index) => {
+        const chip = document.createElement('span');
+        chip.className = 'tag-chip';
+
+        const label = document.createElement('span');
+        label.textContent = tag.name;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = '×';
+        removeBtn.onclick = function () {
+            removeBookmarkTag(index);
+        };
+
+        chip.appendChild(label);
+        chip.appendChild(removeBtn);
+        container.appendChild(chip);
+    });
+}
+
+function addBookmarkTagFromInput() {
+    const input = document.getElementById('bookmark-tag-input');
+    if (!input) return;
+
+    const name = input.value.trim();
+    if (!name) return;
+
+    // avoid duplicate tags by name (case-insensitive)
+    if (currentBookmarkTags.some(t => t.name.toLowerCase() === name.toLowerCase())) {
+        input.value = '';
+        return;
+    }
+
+    currentBookmarkTags.push({ name });
+    input.value = '';
+    renderBookmarkTags();
+}
+
+function removeBookmarkTag(index) {
+    currentBookmarkTags.splice(index, 1);
+    renderBookmarkTags();
+}
 
 // --- Bookmarks (with optional search/filters) ---
 function getBookmarkFilters() {
@@ -310,45 +409,25 @@ function saveBookmark(){
     const data={ url: document.getElementById('bookmark-url').value.trim(),
                  title: document.getElementById('bookmark-title').value.trim(),
                  description: document.getElementById('bookmark-description').value.trim(),
-                 tags: document.getElementById('bookmark-tags').value.split(',').map(t=>t.trim()).filter(t=>t),
+                 tags: currentBookmarkTags.map(t => t.name),
                  is_favorite: document.getElementById('bookmark-favorite').checked };
     if(!data.url){ alert('URL required!'); return; }
     const req = editingBookmarkId
         ? axios.put(`${apiBase}/bookmarks/${editingBookmarkId}`, data, { headers })
         : axios.post(`${apiBase}/bookmarks`, data, { headers });
-    req.then(()=>{ closeModal('bookmark-modal'); fetchBookmarks(); editingBookmarkId=null; })
+    req.then(async ()=>{
+        closeModal('bookmark-modal');
+        await fetchBookmarks();
+        await refreshTagsDropdown();
+        editingBookmarkId=null;
+    })
        .catch(err=>{ console.error(err); alert(err.response?.data?.message||'Failed'); });
 }
-function deleteBookmark(id){ axios.delete(`${apiBase}/bookmarks/${id}`, { headers }).then(fetchBookmarks); }
+function deleteBookmark(id){ axios.delete(`${apiBase}/bookmarks/${id}`, { headers }).then(async ()=>{
+    await fetchBookmarks();
+    await refreshTagsDropdown();
+}); }
 function toggleFavorite(id){ axios.post(`${apiBase}/bookmarks/${id}/toggle-favorite`, {}, { headers }).then(fetchBookmarks); }
-
-// --- Populate filter dropdowns (tags & collections) ---
-function populateFilterDropdowns() {
-    const tagSelect = document.getElementById('filter-tag');
-    const collectionSelect = document.getElementById('filter-collection');
-    const currentTag = tagSelect.value;
-    const currentCollection = collectionSelect.value;
-    tagSelect.innerHTML = '<option value="">All tags</option>';
-    collectionSelect.innerHTML = '<option value="">All collections</option>';
-    axios.get(`${apiBase}/tags`, { headers }).then(res => {
-        res.data.data.tags.forEach(t => {
-            const opt = document.createElement('option');
-            opt.value = t.name;
-            opt.textContent = t.name;
-            if (t.name === currentTag) opt.selected = true;
-            tagSelect.appendChild(opt);
-        });
-    }).catch(() => {});
-    axios.get(`${apiBase}/collections`, { headers }).then(res => {
-        res.data.data.collections.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.id;
-            opt.textContent = c.name;
-            if (String(c.id) === currentCollection) opt.selected = true;
-            collectionSelect.appendChild(opt);
-        });
-    }).catch(() => {});
-}
 
 // --- Collections ---
 function fetchCollections() {
@@ -402,31 +481,51 @@ function toggleCollectionBookmarks(id){
     tr.style.display = (tr.style.display==='none') ? '' : 'none';
 }
 
-
 // --- Tags ---
-function fetchTags(){
-    axios.get(`${apiBase}/tags`, { headers })
-    .then(res=>{
-        const container = document.getElementById('tags');
-        container.innerHTML = '';
-        res.data.data.tags.forEach(t=>{
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${t.name}</td>
-                <td>${t.bookmarks_count}</td>
-                <td>
-                    <button class="edit" onclick='openTagModal(${JSON.stringify(t)})'>Edit</button>
-                    <button class="delete" onclick="deleteTag(${t.id})">Delete</button>
-                </td>`;
-            container.appendChild(tr);
-        });
-    }).catch(err=>console.error(err));
+async function fetchTags(){
+    const res = await axios.get(`${apiBase}/tags`, { headers });
+    const tags = res.data.data.tags;
+
+    const container = document.getElementById('tags');
+    container.innerHTML = '';
+    tags.forEach(t=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${t.name}</td>
+            <td>${t.bookmarks_count}</td>
+            <td>
+                <button class="edit" onclick='openTagModal(${JSON.stringify(t)})'>Edit</button>
+                <button class="delete" onclick="deleteTag(${t.id})">Delete</button>
+            </td>`;
+        container.appendChild(tr);
+    });
+
+    return tags;
 }
-function saveTag(){ const data={name: document.getElementById('tag-name').value};
+
+// دالة مخصصة لتحديث dropdown بعد كل تعديل
+async function refreshTagsDropdown(){
+    const tags = await fetchTags();
+    const select = document.getElementById('filter-tag');
+    select.innerHTML = '<option value="">All Tags</option>';
+    tags.forEach(t=>{
+        const opt = document.createElement('option');
+        opt.value = t.name;
+        opt.textContent = t.name;
+        select.appendChild(opt);
+    });
+}
+
+function saveTag(){ 
+    const data={name: document.getElementById('tag-name').value};
     const req = editingTagId ? axios.put(`${apiBase}/tags/${editingTagId}`, data, { headers }) : axios.post(`${apiBase}/tags`, data, { headers });
-    req.then(()=>{ closeModal('tag-modal'); fetchTags(); editingTagId=null; }).catch(err=>{ console.error(err); alert(err.response?.data?.message||'Failed'); });
+    req.then(async ()=>{
+        closeModal('tag-modal'); 
+        await refreshTagsDropdown();
+        editingTagId=null;
+    }).catch(err=>{ console.error(err); alert(err.response?.data?.message||'Failed'); });
 }
-function deleteTag(id){ axios.delete(`${apiBase}/tags/${id}`, { headers }).then(fetchTags); }
+function deleteTag(id){ axios.delete(`${apiBase}/tags/${id}`, { headers }).then(refreshTagsDropdown); }
 
 // Logout
 function logout(){ axios.post(`${apiBase}/logout`, {}, { headers }).then(()=>{ localStorage.removeItem('auth_token'); window.location.href='/login'; }); }
@@ -438,7 +537,10 @@ function openBookmarkModal(b=null){
     document.getElementById('bookmark-url').value=b?.url||'';
     document.getElementById('bookmark-title').value=b?.title||'';
     document.getElementById('bookmark-description').value=b?.description||'';
-    document.getElementById('bookmark-tags').value=b?b.tags.map(t=>t.name).join(','):'';
+    currentBookmarkTags = b && Array.isArray(b.tags)
+        ? b.tags.map(t => ({ id: t.id, name: t.name }))
+        : [];
+    renderBookmarkTags();
     document.getElementById('bookmark-favorite').checked=b?.is_favorite||false;
     openModal('bookmark-modal');
 }
@@ -502,8 +604,7 @@ axios.get(`${apiBase}/user`, { headers })
 // Initial load
 fetchBookmarks();
 fetchCollections();
-fetchTags();
-populateFilterDropdowns();
+refreshTagsDropdown();
 
 </script>
 
