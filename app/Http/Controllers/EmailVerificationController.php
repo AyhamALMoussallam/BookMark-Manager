@@ -22,7 +22,7 @@ class EmailVerificationController extends Controller
             event(new Verified($user));
         }
 
-        return Redirect::to('/auth?verified=1');
+        return Redirect::to('/login?verified=1');
     }
 
     public function resend(Request $request)
